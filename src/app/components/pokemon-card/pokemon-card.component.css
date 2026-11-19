@@ -1,0 +1,623 @@
+/* =====================================================================
+   CARTA DE POKÉMON — CSS por capas
+
+   REGLA DE DISEÑO: todas las cartas miden EXACTAMENTE lo mismo.
+     1. La carta tiene proporción fija 63:88 (no crece con el contenido).
+     2. Todos los tamaños van en `em`, y 1em depende del ANCHO de la carta
+        (container query units: cqi). Si la carta es más ancha o más
+        estrecha, todo escala igual → misma apariencia en cualquier pantalla.
+     3. Cada sección tiene una altura fija (filas del grid). El contenido
+        variable (nombres largos, 1-3 habilidades) nunca cambia esa altura:
+        se recorta con "…" o deja el hueco vacío.
+     4. La imagen ocupa el espacio que sobra (1fr).
+
+   VARIABLES:
+     --c, --c-claro, --c-oscuro → colores del TIPO        ([data-tipo])
+     --patron                   → dibujo de fondo del TIPO ([data-tipo])
+     --marco, --texto...        → aspecto según RAREZA     ([data-rareza])
+     --px, --py                 → posición del ratón 0-100 (las pone el .ts)
+
+   CAPAS (de abajo a arriba):
+     .carta (marco) → .interior (contenido) → .holo → .destellos → .brillo
+   ===================================================================== */
+
+/* Permite animar un ángulo (lo usa el marco legendario que gira). */
+@property --angulo {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+:host {
+  display: block;
+  container-type: inline-size; /* los hijos pueden usar cqi = % del ancho */
+  perspective: 900px;          /* profundidad del efecto 3D */
+}
+
+/* ---------------------------------------------------------------------
+   1. LA CARTA: tamaño fijo + marco + inclinación 3D
+   --------------------------------------------------------------------- */
+.carta {
+  /* valores por defecto (los sobreescriben tipo y rareza) */
+  --c: #9a9a7a;
+  --c-claro: #ecebdf;
+  --c-oscuro: #5c5c45;
+  --marco: linear-gradient(145deg, #e4e7eb, #a9b0ba 45%, #f2f4f6 60%, #9aa1ab);
+  --texto: #1f2328;
+  --texto-suave: #57606a;
+  --linea: rgba(0, 0, 0, 0.14);
+  --holo-opacidad: 0;
+
+  /* inclinación según el ratón: en el centro (50) = 0 grados */
+  --rot-x: calc((var(--py, 50) - 50) * -0.22deg);
+  --rot-y: calc((var(--px, 50) - 50) * 0.28deg);
+
+  /* TAMAÑO BASE: 1em = 4.2% del ancho de la carta */
+  font-size: 4.2cqi;
+
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  display: grid;          /* el .interior ocupa todo el hueco */
+  padding: 0.75em;
+  border-radius: 1.3em;
+  background: var(--marco);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 3px 8px rgba(0, 0, 0, 0.22),
+    0 12px 20px -12px rgba(0, 0, 0, 0.35);
+  transform: rotateX(var(--rot-x)) rotateY(var(--rot-y));
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+  isolation: isolate; /* los blend-mode solo afectan dentro de la carta */
+  overflow: clip;
+}
+.carta.activa {
+  transform: rotateX(var(--rot-x)) rotateY(var(--rot-y)) scale(1.035);
+  transition: transform 0.08s linear, box-shadow 0.3s;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 18px 30px -10px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------
+   2. EL INTERIOR: grid con una fila por sección
+   --------------------------------------------------------------------- */
+.interior {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-rows:
+    auto              /* cabecera    */
+    minmax(0, 1fr)    /* ventana: todo lo que sobra (min 0 → nunca empuja) */
+    auto              /* franja      */
+    auto              /* tipos       */
+    auto              /* habilidades (altura fija dentro) */
+    auto              /* stats       (altura fija dentro) */
+    auto;             /* pie         */
+  gap: 0.42em;
+  padding: 0.6em 0.8em;
+  border-radius: 0.8em;
+  color: var(--texto);
+  font-family: system-ui, sans-serif;
+  background:
+    var(--patron),
+    radial-gradient(120% 70% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 60%),
+    linear-gradient(165deg, var(--c-claro), color-mix(in srgb, var(--c-claro) 65%, var(--c)));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 1.5em color-mix(in srgb, var(--c) 30%, transparent);
+}
+
+/* Utilidad: una sola línea con "…" si no cabe (altura siempre igual). */
+.etapa,
+h3,
+.franja,
+.nombre-hab,
+.stat-nombre,
+.pie span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Cabecera ---------- */
+.cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6em;
+}
+.titulo {
+  min-width: 0; /* imprescindible para que funcione el "…" dentro de flex */
+}
+.etapa {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 0.6em;
+  font-size: 0.72em;
+  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  border-radius: 0.25em 1em 1em 0.25em;
+  background: linear-gradient(90deg, var(--c-oscuro), var(--c));
+}
+h3 {
+  margin: 0.05em 0 0;
+  font-family: 'Lilita One', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1.75em;
+  line-height: 1.1;
+  text-transform: capitalize;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.ps {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+  color: #c4302b;
+  font-family: 'Lilita One', system-ui, sans-serif;
+}
+.ps small {
+  font-size: 0.85em;
+  margin-top: 0.5em;
+}
+.ps strong {
+  font-weight: 400;
+  font-size: 2.2em;
+  line-height: 1;
+}
+
+/* Orbe del tipo: una "canica" con brillo, hecha solo con gradientes */
+.orbe,
+.coste {
+  flex: none;
+  width: 1.8em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0 12%, transparent 32%),
+    radial-gradient(circle at 50% 55%, var(--c) 0 55%, var(--c-oscuro) 100%);
+  box-shadow: 0 0 0 0.15em #fff, 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.coste {
+  width: 1.1em;
+  box-shadow: 0 0 0 0.12em #fff, 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Ventana de la imagen ---------- */
+.ventana {
+  position: relative;
+  min-height: 0;
+  margin: 0.35em 0.35em 0.15em;
+  border-radius: 0.25em;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.95), transparent 55%),
+    linear-gradient(180deg, color-mix(in srgb, var(--c) 35%, #fff), var(--c));
+  /* marco biselado: varias sombras apiladas */
+  box-shadow:
+    0 0 0 0.16em #fff8d6,
+    0 0 0 0.32em #c9a235,
+    0 0 0 0.4em #8a6a18,
+    inset 0 0 1em rgba(0, 0, 0, 0.35);
+}
+/* Rayos de sol detrás del pokémon */
+.rayos {
+  position: absolute;
+  inset: -50%;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.22) 0 7deg, transparent 7deg 14deg);
+  opacity: 0;
+}
+/* La imagen se coloca encima y se adapta al hueco SIN cambiar su tamaño */
+.ventana img,
+.sin-imagen {
+  position: absolute;
+  inset: 5%;
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+}
+.ventana img {
+  filter: drop-shadow(0 0.4em 0.3em rgba(0, 0, 0, 0.35));
+  transition: transform 0.3s;
+}
+.carta.activa .ventana img {
+  transform: translateZ(30px) scale(1.06);
+}
+.sin-imagen {
+  display: grid;
+  place-items: center;
+  font-size: 3em;
+  color: var(--texto-suave);
+}
+
+/* ---------- Franja ---------- */
+.franja {
+  margin: 0 0.15em;
+  padding: 0.15em 0.9em;
+  font-size: 0.82em;
+  line-height: 1.3;
+  font-style: italic;
+  text-align: center;
+  color: #4a3a0a;
+  background: linear-gradient(90deg, #c9a235, #f7e7a6 30%, #fff6d0 50%, #f7e7a6 70%, #c9a235);
+  clip-path: polygon(3% 0, 97% 0, 100% 50%, 97% 100%, 3% 100%, 0 50%);
+}
+
+/* ---------- Tipos ---------- */
+.tipos {
+  display: flex;
+  justify-content: center;
+  gap: 0.5em;
+  height: 1.55em;
+  overflow: hidden;
+}
+.tipo {
+  padding: 0.15em 0.85em;
+  font-size: 0.85em;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 80%, #fff), var(--c-oscuro));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Habilidades: SIEMPRE 3 huecos (aunque haya 1 o 2) ---------- */
+.habilidades {
+  display: grid;
+  grid-template-rows: repeat(3, 1.5em);
+  padding-top: 0.35em;
+  border-top: 1px solid var(--linea);
+  font-size: 1em;
+}
+.habilidad {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  min-width: 0;
+}
+.nombre-hab {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.oculta {
+  flex: none;
+  font-size: 0.72em;
+  padding: 0 0.6em;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--texto-suave);
+}
+
+/* ---------- Estadísticas: 5 filas de altura fija ---------- */
+.stats {
+  display: grid;
+  grid-template-rows: repeat(5, 1.3em);
+  padding-top: 0.35em;
+  border-top: 1px solid var(--linea);
+  font-size: 0.88em;
+}
+.stat {
+  display: grid;
+  grid-template-columns: 5.6em 1fr 2.2em;
+  align-items: center;
+  gap: 0.5em;
+}
+.stat-nombre {
+  color: var(--texto-suave);
+}
+.barra {
+  height: 0.6em;
+  border-radius: 0.3em;
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.relleno {
+  height: 100%;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent 60%),
+    linear-gradient(90deg, var(--c-oscuro), var(--c));
+}
+.stat-valor {
+  text-align: right;
+  font-weight: 800;
+}
+
+/* ---------- Pie ---------- */
+.pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  padding-top: 0.3em;
+  font-size: 0.78em;
+  line-height: 1.3;
+  color: var(--texto-suave);
+  border-top: 1px solid var(--linea);
+}
+.simbolo {
+  flex: none;
+  font-size: 1.2em;
+  color: var(--c-oscuro);
+}
+
+/* ---------------------------------------------------------------------
+   3. CAPAS DE EFECTOS (encima del contenido, no reciben el ratón)
+   --------------------------------------------------------------------- */
+.holo,
+.destellos,
+.brillo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Lámina holográfica: arcoíris que se desplaza con el ratón */
+.holo {
+  opacity: var(--holo-opacidad);
+  mix-blend-mode: color-dodge;
+  background:
+    repeating-linear-gradient(110deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 5px),
+    linear-gradient(
+      115deg,
+      transparent 15%,
+      rgba(255, 60, 170, 0.55) 30%,
+      rgba(60, 230, 255, 0.55) 40%,
+      rgba(255, 240, 60, 0.55) 50%,
+      rgba(70, 255, 140, 0.55) 60%,
+      rgba(150, 90, 255, 0.55) 70%,
+      transparent 85%
+    );
+  background-size: 100% 100%, 300% 300%;
+  background-position: 0 0, calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%);
+  transition: opacity 0.3s;
+}
+.carta.activa .holo {
+  opacity: calc(var(--holo-opacidad) * 1.6);
+}
+
+/* Estrellitas (solo se ven en las legendarias) */
+.destellos {
+  opacity: 0;
+  background:
+    radial-gradient(circle, #fff 0 1px, transparent 1.5px) 0 0 / 37px 41px,
+    radial-gradient(circle, #fff 0 1.5px, transparent 2px) 13px 19px / 53px 59px,
+    radial-gradient(circle, #fff6b0 0 1px, transparent 1.5px) 7px 31px / 29px 47px;
+  mix-blend-mode: screen;
+}
+
+/* Reflejo de luz que sigue al ratón (todas las cartas) */
+.brillo {
+  opacity: 0;
+  mix-blend-mode: soft-light;
+  background: radial-gradient(
+    circle at calc(var(--px, 50) * 1%) calc(var(--py, 50) * 1%),
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 255, 255, 0.15) 35%,
+    rgba(0, 0, 0, 0.25) 90%
+  );
+  transition: opacity 0.3s;
+}
+.carta.activa .brillo {
+  opacity: 1;
+}
+
+/* =====================================================================
+   4. RAREZAS (solo cambian colores y efectos, NUNCA tamaños)
+   ===================================================================== */
+
+/* ● Común: marco plateado sencillo (valores por defecto) */
+
+/* ◈ Infrecuente: plata con filo del color del tipo */
+[data-rareza='infrecuente'] .interior {
+  box-shadow:
+    inset 0 0 0 0.16em var(--c),
+    inset 0 0 0 0.24em rgba(255, 255, 255, 0.6),
+    inset 0 0 1.5em color-mix(in srgb, var(--c) 30%, transparent);
+}
+
+/* ◆ Rara: marco dorado + brillo holográfico suave + rayos */
+[data-rareza='rara'] {
+  --marco: linear-gradient(135deg, #f6e27a, #cb9b28 28%, #fff4c4 48%, #b8861b 70%, #f3d36b);
+  --holo-opacidad: 0.08;
+}
+[data-rareza='rara'] .rayos {
+  opacity: 0.6;
+}
+
+/* ★ Holo: marco dorado brillante + lámina arcoíris + ventana holográfica */
+[data-rareza='holo'] {
+  --marco: linear-gradient(135deg, #fff1a8, #d4a531 25%, #fffbe6 45%, #c48f1d 65%, #ffe58a 85%, #b07c12);
+  --holo-opacidad: 0.2;
+}
+[data-rareza='holo'] .rayos {
+  opacity: 1;
+  animation: girar 30s linear infinite;
+}
+[data-rareza='holo'] .ventana {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.9), transparent 50%),
+    conic-gradient(from 200deg at 50% 50%, #ff9bd2, #9be7ff, #fff59b, #a6ffb8, #c9a6ff, #ff9bd2);
+}
+[data-rareza='holo'] .etapa {
+  background: linear-gradient(90deg, #b07c12, #f3d36b, #b07c12);
+  color: #3a2a00;
+}
+
+/* ★★ Legendaria: carta oscura "full art", marco arcoíris que gira y estrellas */
+[data-rareza='legendaria'] {
+  --marco: conic-gradient(from var(--angulo), #ffd86b, #ff7eb3, #8a7dff, #7afcff, #b6ff8a, #ffd86b);
+  --texto: #f5f3ff;
+  --texto-suave: #c9c4e8;
+  --linea: rgba(255, 255, 255, 0.18);
+  --holo-opacidad: 0.35;
+  animation: girar-marco 6s linear infinite;
+}
+[data-rareza='legendaria'] .interior {
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--c) 70%, transparent), transparent 55%),
+    radial-gradient(120% 90% at 50% 110%, color-mix(in srgb, var(--c-oscuro) 80%, #000), transparent 70%),
+    linear-gradient(180deg, #1b1640, #0b0a1c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 0 2.5em rgba(0, 0, 0, 0.6);
+}
+[data-rareza='legendaria'] h3 {
+  text-shadow: 0 0 0.6em color-mix(in srgb, var(--c) 80%, transparent);
+}
+[data-rareza='legendaria'] .ps {
+  color: #ffd86b;
+}
+[data-rareza='legendaria'] .etapa {
+  background: linear-gradient(90deg, #ff7eb3, #8a7dff, #7afcff);
+}
+/* Sin marco en la ventana: el pokémon "flota" sobre el fondo oscuro */
+[data-rareza='legendaria'] .ventana {
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+[data-rareza='legendaria'] .rayos {
+  inset: -15% -5%;
+  opacity: 0.5;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 45%, transparent) 0 5deg, transparent 5deg 10deg);
+  mask: radial-gradient(circle, #000 20%, transparent 65%);
+  animation: girar 20s linear infinite;
+}
+[data-rareza='legendaria'] .ventana img {
+  inset: -2%;
+  width: 104%;
+  height: 104%;
+  filter:
+    drop-shadow(0 0 0.9em color-mix(in srgb, var(--c) 90%, transparent))
+    drop-shadow(0 0.4em 0.4em rgba(0, 0, 0, 0.6));
+}
+[data-rareza='legendaria'] .barra {
+  background: rgba(255, 255, 255, 0.12);
+}
+[data-rareza='legendaria'] .destellos {
+  opacity: 0.8;
+  animation: titilar 2.4s ease-in-out infinite alternate;
+}
+[data-rareza='legendaria'] .simbolo {
+  color: #ffd86b;
+}
+
+/* =====================================================================
+   5. TIPOS: colores + patrón de fondo
+   color-mix(...) mezcla el color del tipo con transparente para que el
+   dibujo se vea sutil.
+   ===================================================================== */
+[data-tipo] {
+  --tinta: color-mix(in srgb, var(--c) 16%, transparent);
+  --patron: radial-gradient(var(--tinta) 1.2px, transparent 1.6px) 0 0 / 11px 11px;
+}
+
+[data-tipo='normal'] { --c: #9a9a7a; --c-claro: #efeee4; --c-oscuro: #5c5c45; }
+[data-tipo='fire'] {
+  --c: #e8692c; --c-claro: #fde6d6; --c-oscuro: #9c3a10;
+  --patron: repeating-linear-gradient(-60deg, transparent 0 12px, var(--tinta) 12px 15px);
+}
+[data-tipo='water'] {
+  --c: #4c7fe0; --c-claro: #dde8fc; --c-oscuro: #22489a;
+  --patron: radial-gradient(circle at 50% 130%, transparent 14px, var(--tinta) 15px 17px, transparent 18px) 0 0 / 32px 18px;
+}
+[data-tipo='grass'] {
+  --c: #5fae3a; --c-claro: #e2f2d8; --c-oscuro: #2f6b16;
+  --patron: conic-gradient(from 45deg, var(--tinta) 0 25%, transparent 0 50%, var(--tinta) 0 75%, transparent 0) 0 0 / 18px 18px;
+}
+[data-tipo='electric'] {
+  --c: #d6a90f; --c-claro: #fcf2c8; --c-oscuro: #8a6a00;
+  --patron:
+    linear-gradient(135deg, var(--tinta) 25%, transparent 25%) -9px 0 / 18px 18px,
+    linear-gradient(225deg, var(--tinta) 25%, transparent 25%) -9px 0 / 18px 18px;
+}
+[data-tipo='ice'] {
+  --c: #5ec0c0; --c-claro: #e0f5f5; --c-oscuro: #2a7c7c;
+  --patron:
+    repeating-linear-gradient(60deg, transparent 0 14px, var(--tinta) 14px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 14px, var(--tinta) 14px 15px);
+}
+[data-tipo='fighting'] { --c: #b33a2c; --c-claro: #f5dcd8; --c-oscuro: #6e1a10; }
+[data-tipo='poison'] {
+  --c: #94449c; --c-claro: #efdcf1; --c-oscuro: #5a1d60;
+  --patron: radial-gradient(circle, var(--tinta) 0 4px, transparent 5px) 0 0 / 22px 22px;
+}
+[data-tipo='ground'] {
+  --c: #c19a4d; --c-claro: #f5ead4; --c-oscuro: #7a5a1c;
+  --patron: repeating-linear-gradient(0deg, transparent 0 9px, var(--tinta) 9px 11px);
+}
+[data-tipo='flying'] {
+  --c: #8c7fd8; --c-claro: #e9e5fa; --c-oscuro: #4d3fa0;
+  --patron: radial-gradient(ellipse at 50% 100%, transparent 10px, var(--tinta) 11px 12px, transparent 13px) 0 0 / 28px 14px;
+}
+[data-tipo='psychic'] {
+  --c: #e7537f; --c-claro: #fbdde6; --c-oscuro: #9c1f45;
+  --patron: repeating-radial-gradient(circle at 50% 35%, transparent 0 11px, var(--tinta) 11px 13px);
+}
+[data-tipo='bug'] {
+  --c: #97a521; --c-claro: #f0f2d2; --c-oscuro: #5c660a;
+  --patron: radial-gradient(circle, var(--tinta) 0 2px, transparent 2.5px) 0 0 / 14px 14px;
+}
+[data-tipo='rock'] {
+  --c: #a6923a; --c-claro: #f1ebd3; --c-oscuro: #6a5a14;
+  --patron: conic-gradient(var(--tinta) 0 25%, transparent 0 50%, var(--tinta) 0 75%, transparent 0) 0 0 / 24px 24px;
+}
+[data-tipo='ghost'] {
+  --c: #66548f; --c-claro: #e5e0f1; --c-oscuro: #3a2b63;
+  --patron: radial-gradient(circle, var(--tinta) 0 6px, transparent 7px) 0 0 / 30px 30px;
+}
+[data-tipo='dragon'] {
+  --c: #6744e0; --c-claro: #e4dcfb; --c-oscuro: #3a1e9e;
+  --patron: radial-gradient(circle at 50% 0, transparent 8px, var(--tinta) 9px 10px, transparent 11px) 0 0 / 20px 12px;
+}
+[data-tipo='dark'] { --c: #685548; --c-claro: #e7dfd9; --c-oscuro: #3a2c22; }
+[data-tipo='steel'] {
+  --c: #8f95a8; --c-claro: #e9ebf1; --c-oscuro: #545a6e;
+  --patron: repeating-linear-gradient(45deg, transparent 0 6px, var(--tinta) 6px 7px);
+}
+[data-tipo='fairy'] {
+  --c: #d9799b; --c-claro: #f9e4ec; --c-oscuro: #9c3a5e;
+  --patron: radial-gradient(circle, var(--tinta) 0 3px, transparent 3.5px) 0 0 / 18px 18px;
+}
+
+/* =====================================================================
+   6. ANIMACIONES
+   ===================================================================== */
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+@keyframes girar-marco {
+  to { --angulo: 360deg; }
+}
+@keyframes titilar {
+  from { opacity: 0.35; }
+  to { opacity: 0.95; }
+}
+
+/* Si el usuario pide menos movimiento en su sistema, lo respetamos. */
+@media (prefers-reduced-motion: reduce) {
+  .carta,
+  .carta.activa {
+    transform: none;
+  }
+  .rayos,
+  .destellos,
+  [data-rareza='legendaria'] {
+    animation: none !important;
+  }
+}

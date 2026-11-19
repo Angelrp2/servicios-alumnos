@@ -1,0 +1,56 @@
+<!-- [value]="campo()"           → el signal se PINTA en el input
+     (input)="campo.set(...)"     → lo que escribes se GUARDA en el signal -->
+<form class="form" (submit)="enviar($event)" novalidate>
+  <h2>Nuevo alumno</h2>
+
+  <div class="fila">
+    <label>
+      Nombre
+      <input [value]="nombre()" (input)="nombre.set(valor($event))" placeholder="Ana" />
+      @if (intentado() && errores()['nombre']) {
+        <small>{{ errores()['nombre'] }}</small>
+      }
+    </label>
+
+    <label>
+      Apellidos
+      <input [value]="apellidos()" (input)="apellidos.set(valor($event))" placeholder="García López" />
+      @if (intentado() && errores()['apellidos']) {
+        <small>{{ errores()['apellidos'] }}</small>
+      }
+    </label>
+  </div>
+
+  <div class="fila">
+    <label>
+      Email
+      <input type="email" [value]="email()" (input)="email.set(valor($event))" placeholder="ana@digitech.es" />
+      @if (intentado() && errores()['email']) {
+        <small>{{ errores()['email'] }}</small>
+      }
+    </label>
+
+    <label>
+      Curso
+      <select [value]="curso()" (change)="curso.set(valor($event))">
+        <option>1º DAM</option>
+        <option>2º DAM</option>
+        <option>1º DAW</option>
+        <option>2º DAW</option>
+      </select>
+    </label>
+
+    <label>
+      Nota media
+      <input type="number" min="0" max="10" step="0.1" [value]="nota()" (input)="nota.set(valor($event))" placeholder="7.5" />
+      @if (intentado() && errores()['nota']) {
+        <small>{{ errores()['nota'] }}</small>
+      }
+    </label>
+  </div>
+
+  <div class="acciones">
+    <button type="submit" class="btn btn-exito">Guardar alumno</button>
+    <button type="button" class="btn btn-secundario" (click)="limpiar()">Limpiar</button>
+  </div>
+</form>

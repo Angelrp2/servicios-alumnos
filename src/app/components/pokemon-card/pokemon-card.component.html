@@ -1,0 +1,79 @@
+<!-- data-tipo → colores y patrón de fondo · data-rareza → marco y efectos -->
+<article
+  class="carta"
+  [attr.data-tipo]="tipoPrincipal()"
+  [attr.data-rareza]="infoRareza().rareza"
+  [class.activa]="activa()"
+>
+  <div class="interior">
+    <!-- ===== CABECERA ===== -->
+    <header class="cabecera">
+      <div class="titulo">
+        <span class="etapa">{{ infoRareza().nombre }}</span>
+        <h3 [title]="pokemon().nombre">{{ pokemon().nombre }}</h3>
+      </div>
+      <div class="ps">
+        <small>PS</small>
+        <strong>{{ pokemon().ps }}</strong>
+        <span class="orbe" [attr.data-tipo]="tipoPrincipal()"></span>
+      </div>
+    </header>
+
+    <!-- ===== VENTANA CON LA IMAGEN ===== -->
+    <div class="ventana">
+      <div class="rayos"></div>
+      @if (pokemon().imagen) {
+        <img [src]="pokemon().imagen" [alt]="pokemon().nombre" width="160" height="160" />
+      } @else {
+        <span class="sin-imagen">?</span>
+      }
+    </div>
+
+    <!-- ===== FRANJA DE DATOS ===== -->
+    <p class="franja">
+      Nº {{ pokemon().pokeapi_id | number: '3.0-0' }} · Altura {{ pokemon().altura }} m · Peso {{ pokemon().peso }} kg
+    </p>
+
+    <!-- ===== TIPOS ===== -->
+    <div class="tipos">
+      @for (t of tiposTraducidos(); track t.clave) {
+        <span class="tipo" [attr.data-tipo]="t.clave">{{ t.nombre }}</span>
+      }
+    </div>
+
+    <!-- ===== HABILIDADES ===== -->
+    <section class="habilidades">
+      @for (h of habilidades(); track h.nombre) {
+        <div class="habilidad">
+          <span class="coste" [attr.data-tipo]="tipoPrincipal()"></span>
+          <span class="nombre-hab" [title]="h.nombre">{{ h.nombre }}</span>
+          @if (h.oculta) {
+            <span class="oculta">oculta</span>
+          }
+        </div>
+      }
+    </section>
+
+    <!-- ===== ESTADÍSTICAS ===== -->
+    <section class="stats">
+      @for (b of barras(); track b.nombre) {
+        <div class="stat">
+          <span class="stat-nombre">{{ b.nombre }}</span>
+          <div class="barra"><div class="relleno" [style.width.%]="b.porcentaje"></div></div>
+          <span class="stat-valor">{{ b.valor }}</span>
+        </div>
+      }
+    </section>
+
+    <!-- ===== PIE ===== -->
+    <footer class="pie">
+      <span>Total {{ totalStats() }} · Exp. {{ pokemon().experiencia }}</span>
+      <span class="simbolo" [title]="infoRareza().nombre">{{ infoRareza().simbolo }}</span>
+    </footer>
+  </div>
+
+  <!-- Capas de efectos por encima de todo (no reciben clics) -->
+  <div class="holo"></div>
+  <div class="destellos"></div>
+  <div class="brillo"></div>
+</article>

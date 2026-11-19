@@ -1,0 +1,81 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { AlumnoCardComponent } from '../../components/alumno-card/alumno-card.component';
+import { AlumnosService } from '../../services/alumnos.service';
+import { Alumno } from '../../models/alumno.model';
+
+// =====================================================================
+// COMPONENTE SMART (listo / contenedor)
+//  - Inyecta el servicio y habla con él.
+//  - Guarda el estado de la pantalla en signals.
+//  - Pasa datos a los Dumb y escucha sus eventos.
+// =====================================================================
+@Component({
+  selector: 'app-alumnos-page',
+  imports: [AlumnoCardComponent],
+  templateUrl: './alumnos-page.component.html',
+  styleUrl: './alumnos-page.component.css',
+})
+export class AlumnosPageComponent {
+  // ---------------------------------------------------------------
+  // INYECCIÓN DE DEPENDENCIAS
+  // No hacemos `new AlumnosService()`. Le PEDIMOS a Angular la
+  // instancia única (singleton) que creó gracias a providedIn: 'root'.
+  // ---------------------------------------------------------------
+  private alumnosService = inject(AlumnosService);
+
+  // ESTADO: copia de la lista que viene del servicio, metida en un signal
+  // para que la vista se repinte cuando cambie.
+  alumnos = signal<Alumno[]>(this.alumnosService.getAlumnos());
+
+  // DERIVADO: no se guarda, se calcula (regla del "estado mínimo").
+  // OJO: leemos this.alumnos() a propósito. computed() solo se recalcula
+  // cuando cambia algún signal que lea dentro. Si solo llamásemos al
+  // servicio (que no tiene signals) las estadísticas se quedarían congeladas.
+  estadisticas = computed(() => {
+    this.alumnos(); // ← dependencia: "recalcúlame cuando cambie la lista"
+    return this.alumnosService.getEstadisticas();
+  });
+
+  // ---------------------------------------------------------------
+  // FLUJO al eliminar (síguelo con los números):
+  //   PASO 1  AlumnoCard emite (eliminar) con el id
+  //   PASO 2  llega aquí, a eliminarAlumno(id)
+  //   PASO 3  confirm(): si el usuario cancela, el flujo se corta
+  //   PASO 4  delegamos en el servicio (él modifica los datos)
+  //   PASO 5  si ha ido bien, refrescamos el signal con .set()
+  //   PASO 6  el signal cambia → computed recalcula → la vista se repinta
+  // ---------------------------------------------------------------
+  eliminarAlumno(id: number) {
+    console.log('PASO 2 → la página recibe el id', id);
+
+    if (!confirm('¿Seguro que quieres eliminar este alumno?')) {
+      console.log('PASO 3 → cancelado, no hacemos nada');
+      return;
+    }
+
+    const exito = this.alumnosService.eliminarAlumno(id);
+    console.log('PASO 4 → el servicio responde', exito);
+
+    if (exito) {
+      this.alumnos.set(this.alumnosService.getAlumnos());
+      console.log('PASO 5 → signal actualizado, Angular repinta (PASO 6)');
+    }
+  }
+
+  // Mismo flujo, pero para añadir. Los valores vienen del formulario.
+  agregarAlumno(nombre: string, apellidos: string, nota: string) {
+    if (!nombre.trim() || nota === '') {
+      return; // validación mínima: el flujo se corta si faltan datos
+    }
+
+    this.alumnosService.agregarAlumno({
+      nombre: nombre.trim(),
+      apellidos: apellidos.trim(),
+      email: `${nombre.trim().toLowerCase()}@digitech.es`,
+      curso: '1º DAM',
+      notaMedia: Number(nota),
+    });
+
+    this.alumnos.set(this.alumnosService.getAlumnos());
+  }
+}

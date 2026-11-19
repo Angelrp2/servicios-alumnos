@@ -1,0 +1,19 @@
+/* Lo común (botones, rejilla, campos, estados) está en styles.css. */
+h1 small {
+  font-size: 0.6em;
+  color: var(--color-texto-suave);
+}
+.celda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.celda .campo {
+  flex: none;
+}
+.acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}

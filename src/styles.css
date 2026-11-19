@@ -1,0 +1,120 @@
+/* =====================================================================
+   ESTILOS GLOBALES (se aplican a toda la app)
+
+   Aquí va SOLO lo que se repite en varios componentes:
+     1. Variables de diseño (colores, radios...) → cambiar un color = 1 línea
+     2. Botones (.btn)
+     3. Contenedor de página (.pagina)
+     4. Rejilla de cartas + esqueletos de carga
+     5. Mensajes de estado (.estado)
+   Lo específico de cada componente sigue en su propio .css.
+   ===================================================================== */
+
+:root {
+  --color-primario: #cf222e;
+  --color-exito: #2da44e;
+  --color-texto: #24292f;
+  --color-texto-suave: #57606a;
+  --color-borde: #d0d7de;
+  --color-fondo-suave: #f6f8fa;
+  --color-fondo-gris: #eaeef2;
+  --radio: 6px;
+  --fuente: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fuente);
+  color: var(--color-texto);
+  background: #fff;
+}
+
+/* ---------- 1. Botones ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.5em 0.9em;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  font: inherit;
+  cursor: pointer;
+  background: var(--color-primario);
+  color: #fff;
+  transition: filter 0.15s, background 0.15s;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn-secundario {
+  background: var(--color-fondo-gris);
+  color: var(--color-texto);
+}
+.btn-exito {
+  background: var(--color-exito);
+}
+.btn-borde {
+  background: #fff;
+  color: var(--color-texto);
+  border-color: var(--color-borde);
+}
+.btn-sm {
+  padding: 0.25em 0.6em;
+  font-size: 0.85rem;
+}
+
+/* ---------- 2. Contenedor de página ---------- */
+.pagina {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.fila-separada {
+  justify-content: space-between;
+}
+.campo {
+  flex: 1 1 220px;
+  padding: 0.5em;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  font: inherit;
+}
+
+/* ---------- 3. Rejilla de cartas + esqueletos ---------- */
+.grid-cartas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+.esqueleto {
+  aspect-ratio: 63 / 88; /* mismo tamaño que una carta */
+  border-radius: 16px;
+  background: var(--color-fondo-gris);
+  animation: parpadeo 1s ease-in-out infinite alternate;
+}
+@keyframes parpadeo {
+  to { opacity: 0.5; }
+}
+
+/* ---------- 4. Mensajes de estado ---------- */
+.estado {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--color-fondo-suave);
+}
+.estado-error {
+  background: #ffebe9;
+  color: #82071e;
+}

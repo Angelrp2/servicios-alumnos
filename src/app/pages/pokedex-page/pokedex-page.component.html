@@ -1,0 +1,60 @@
+<div class="pagina">
+  <h1>Pokédex</h1>
+
+  <!-- Buscador -->
+  <form class="fila" (submit)="buscar($event, texto.value)">
+    <input #texto class="campo" placeholder="Nombre o número (pikachu, 25...)" />
+    <button type="submit" class="btn">Buscar</button>
+    @if (busqueda()) {
+      <button type="button" class="btn btn-secundario" (click)="limpiarBusqueda(texto)">Ver listado</button>
+    }
+  </form>
+
+  <!-- Paginación (solo en el listado) -->
+  @if (!busqueda()) {
+    <div class="fila fila-separada">
+      <button class="btn" (click)="cambiarPagina(-1)" [disabled]="pagina() === 0 || listado.isLoading()">← Anterior</button>
+      <span>Página {{ pagina() + 1 }}@if (totalPaginas()) { de {{ totalPaginas() }} }</span>
+      <button class="btn" (click)="cambiarPagina(1)" [disabled]="listado.isLoading() || pagina() + 1 >= totalPaginas()">Siguiente →</button>
+    </div>
+  }
+
+  @if (coleccion.errorOperacion(); as error) {
+    <p class="estado estado-error" role="alert">{{ error }}</p>
+  }
+
+  <!-- Cargando / error / datos: el componente reutilizable se encarga -->
+  <app-estado-carga
+    [cargando]="recursoActivo().isLoading()"
+    [error]="recursoActivo().error()"
+    [huecos]="busqueda() ? 1 : POR_PAGINA"
+    (reintentar)="reintentar()"
+  >
+    <div class="grid-cartas">
+      @for (p of pokemons(); track p.pokeapi_id) {
+        @let guardado = coleccion.porPokeapiId().get(p.pokeapi_id);
+        <div class="celda">
+          <app-pokemon-card [pokemon]="p" />
+          <div class="acciones">
+            <app-valoracion
+              [valor]="guardado?.me_gusta ?? null"
+              [ocupado]="coleccion.enCurso(p.pokeapi_id)"
+              (cambiar)="valorar(p, $event)"
+            />
+            @if (guardado) {
+              <span class="guardado" title="Está en tu colección">✓ Guardado</span>
+            } @else {
+              <button
+                class="btn btn-sm btn-exito"
+                [disabled]="coleccion.enCurso(p.pokeapi_id)"
+                (click)="coleccion.guardar(p.pokeapi_id)"
+              >＋ Guardar</button>
+            }
+          </div>
+        </div>
+      } @empty {
+        <p class="estado">No hay pokémon que mostrar.</p>
+      }
+    </div>
+  </app-estado-carga>
+</div>

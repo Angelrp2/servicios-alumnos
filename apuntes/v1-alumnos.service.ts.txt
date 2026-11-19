@@ -1,0 +1,78 @@
+import { Injectable } from '@angular/core';
+import { Alumno } from '../models/alumno.model';
+
+// =====================================================================
+// SERVICIO: la "biblioteca" central. Guarda los datos y la lógica.
+//
+// @Injectable({ providedIn: 'root' }) le dice a Angular:
+//   - "Crea UNA sola instancia de esta clase para toda la app" (singleton)
+//   - "Dásela a cualquier componente que la pida con inject()"
+// Por eso NO hace falta ponerlo en ningún array `providers`.
+// =====================================================================
+@Injectable({ providedIn: 'root' })
+export class AlumnosService {
+  // Datos mock (simulados). Son PRIVATE: nadie de fuera los toca
+  // directamente, solo a través de los métodos públicos de abajo.
+  // Esta es la ÚNICA FUENTE DE VERDAD de los alumnos.
+  private alumnos: Alumno[] = [
+    { id: 1, nombre: 'Ana', apellidos: 'García López', email: 'ana@digitech.es', curso: '2º DAM', notaMedia: 8.5 },
+    { id: 2, nombre: 'Luis', apellidos: 'Martín Ruiz', email: 'luis@digitech.es', curso: '2º DAM', notaMedia: 6.2 },
+    { id: 3, nombre: 'Sara', apellidos: 'López Díaz', email: 'sara@digitech.es', curso: '1º DAM', notaMedia: 9.1 },
+    { id: 4, nombre: 'Pablo', apellidos: 'Sánchez Gil', email: 'pablo@digitech.es', curso: '1º DAM', notaMedia: 4.8 },
+    { id: 5, nombre: 'Marta', apellidos: 'Romero Vega', email: 'marta@digitech.es', curso: '2º DAM', notaMedia: 7.3 },
+  ];
+
+  constructor() {
+    // Si abres la consola del navegador (F12) verás que esto sale UNA vez,
+    // aunque lo inyecten varios componentes → demuestra que es singleton.
+    console.log('🟢 AlumnosService creado (solo debería salir 1 vez)');
+  }
+
+  /**
+   * Devuelve todos los alumnos.
+   * Devolvemos una COPIA ([...]) para que quien la reciba tenga un array
+   * nuevo y los signals detecten el cambio.
+   */
+  getAlumnos(): Alumno[] {
+    return [...this.alumnos];
+  }
+
+  /** Busca un alumno por id (o undefined si no existe). */
+  getAlumnoById(id: number): Alumno | undefined {
+    return this.alumnos.find(a => a.id === id);
+  }
+
+  /**
+   * Añade un alumno. Recibe un alumno SIN id (Omit) y le genera uno.
+   * @returns el alumno creado con su id
+   */
+  agregarAlumno(alumno: Omit<Alumno, 'id'>): Alumno {
+    const nuevoId = this.alumnos.length ? Math.max(...this.alumnos.map(a => a.id)) + 1 : 1;
+    const nuevo: Alumno = { ...alumno, id: nuevoId };
+    this.alumnos.push(nuevo);
+    return nuevo;
+  }
+
+  /**
+   * Elimina un alumno por id.
+   * @returns true si lo eliminó, false si no lo encontró
+   */
+  eliminarAlumno(id: number): boolean {
+    const index = this.alumnos.findIndex(a => a.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.alumnos.splice(index, 1);
+    return true;
+  }
+
+  /** Total de alumnos y nota media general. */
+  getEstadisticas() {
+    const total = this.alumnos.length;
+    const suma = this.alumnos.reduce((acc, a) => acc + a.notaMedia, 0);
+    return {
+      total,
+      notaMediaGeneral: total ? +(suma / total).toFixed(2) : 0,
+    };
+  }
+}

@@ -1,0 +1,33 @@
+<div class="pagina">
+  <header>
+    <h1>Gestión de Alumnos</h1>
+    <div class="stats">
+      <div class="stat">
+        <span class="valor">{{ total() }}</span>
+        <span>Total</span>
+      </div>
+      <div class="stat">
+        <span class="valor">{{ notaMediaGeneral() }}</span>
+        <span>Nota media general</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1) RECOGER: el formulario emite (guardar) con los datos del alumno -->
+  <app-alumno-form (guardar)="guardarAlumno($event)" />
+
+  <!-- 3) IMPRIMIR: la lista lee alumnos() del servicio y pinta una tarjeta por alumno -->
+  <div class="cabecera-lista">
+    <h2>Alumnos guardados</h2>
+    <button type="button" class="btn btn-sm btn-secundario" (click)="restablecer()">Restablecer datos de ejemplo</button>
+  </div>
+
+  <main class="lista">
+    <!-- Los datos BAJAN con [alumno] y los eventos SUBEN con (eliminar) -->
+    @for (a of alumnos(); track a.id) {
+      <app-alumno-card [alumno]="a" (eliminar)="eliminarAlumno($event)" (cambiarNota)="cambiarNota($event)" />
+    } @empty {
+      <p>No hay alumnos.</p>
+    }
+  </main>
+</div>

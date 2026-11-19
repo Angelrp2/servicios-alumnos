@@ -1,0 +1,68 @@
+<div class="pagina">
+  <h1>Mi colección <small>({{ coleccion.total() }})</small></h1>
+
+  <!-- Filtros: se calculan en local, sin pedir nada a la API -->
+  <div class="fila" role="tablist">
+    @for (f of filtros; track f.clave) {
+      <button
+        class="btn btn-sm"
+        [class.btn-borde]="filtro() !== f.clave"
+        [attr.aria-selected]="filtro() === f.clave"
+        (click)="filtro.set(f.clave)"
+      >{{ f.etiqueta }} ({{ contadores()[f.clave] }})</button>
+    }
+  </div>
+
+  @if (coleccion.errorOperacion(); as error) {
+    <p class="estado estado-error" role="alert">{{ error }}</p>
+  }
+
+  <app-estado-carga
+    [cargando]="coleccion.lista.isLoading()"
+    [error]="coleccion.lista.error()"
+    [huecos]="4"
+    (reintentar)="coleccion.lista.reload()"
+  >
+    <div class="grid-cartas">
+      @for (p of visibles(); track p.id) {
+        <div class="celda">
+          <app-pokemon-card [pokemon]="p" />
+
+          <!-- UPDATE: apodo (se guarda al salir del campo o pulsar Enter) -->
+          <input
+            #apodo
+            class="campo"
+            maxlength="30"
+            placeholder="Ponle un apodo..."
+            [value]="p.apodo ?? ''"
+            (keydown.enter)="apodo.blur()"
+            (blur)="guardarApodo(p, apodo.value)"
+          />
+
+          <div class="acciones">
+            <app-valoracion
+              [valor]="p.me_gusta"
+              [ocupado]="coleccion.enCurso(p.pokeapi_id)"
+              (cambiar)="coleccion.valorar(p, $event)"
+            />
+            <!-- DELETE -->
+            <button
+              class="btn btn-sm btn-secundario"
+              [disabled]="coleccion.enCurso(p.pokeapi_id)"
+              (click)="borrar(p)"
+              title="Quitar de la colección"
+            >🗑</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="estado">
+          @if (coleccion.total() === 0) {
+            Aún no tienes pokémon. Ve a la Pokédex y pulsa «＋ Guardar» o 👍.
+          } @else {
+            Ningún pokémon en este filtro.
+          }
+        </p>
+      }
+    </div>
+  </app-estado-carga>
+</div>

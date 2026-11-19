@@ -1,0 +1,17 @@
+<article class="card" [class.suspenso]="alumno().notaMedia < 5">
+  <h3>{{ alumno().nombre }} {{ alumno().apellidos }}</h3>
+  <p>{{ alumno().email }}</p>
+  <p>{{ alumno().curso }}</p>
+  <p class="nota">
+    Nota media: <strong>{{ alumno().notaMedia }}</strong>
+    <button class="btn btn-sm btn-secundario mini" (click)="onCambiarNota(-0.5)">−</button>
+    <button class="btn btn-sm btn-secundario mini" (click)="onCambiarNota(0.5)">+</button>
+  </p>
+
+  <!-- Control de flujo en plantilla: @if -->
+  @if (alumno().notaMedia >= 9) {
+    <span class="badge">⭐ Matrícula</span>
+  }
+
+  <button class="btn btn-sm eliminar" (click)="onEliminar()">Eliminar</button>
+</article>
